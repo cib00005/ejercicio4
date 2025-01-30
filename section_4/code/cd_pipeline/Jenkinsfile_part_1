@@ -40,31 +40,31 @@ def deploy(environment) {
         System.exit(0)
     }
 
-    // Comprobar si el contenedor está en ejecución
-    bat """
-        echo Comprobando si el contenedor ${containerName} está en ejecución
-        docker ps -f "name=${containerName}" -q
-    """
+    // Verificar si el contenedor existe
+    def containerExists = bat(script: "docker ps -a -f name=${containerName} -q", returnStdout: true).trim()
 
-    // Detener los contenedores si están corriendo
-    bat """
-        echo Deteniendo contenedores con nombre ${containerName}
-        for /f "tokens=*" %%i in ('docker ps -f "name=${containerName}" -q') do (
-            if %%i NEQ "" docker stop %%i
-        )
-    """
-
-    // Eliminar contenedores detenidos
-    bat """
-        echo Eliminando contenedores detenidos con nombre ${containerName}
-        for /f "tokens=*" %%i in ('docker ps -a -f "name=${containerName}" -q') do (
-            if %%i NEQ "" docker rm %%i
-        )
-    """
+    if (containerExists) {
+        echo "Contenedor encontrado, procediendo a detener y eliminar..."
+        
+        // Detener los contenedores si están corriendo
+        bat """
+            for /f "tokens=*" %%i in ('docker ps -f "name=${containerName}" -q') do (
+                if %%i NEQ "" docker stop %%i
+            )
+        """
+        
+        // Eliminar contenedores detenidos
+        bat """
+            for /f "tokens=*" %%i in ('docker ps -a -f "name=${containerName}" -q') do (
+                if %%i NEQ "" docker rm %%i
+            )
+        """
+    } else {
+        echo "Contenedor no encontrado, no es necesario detener ni eliminar."
+    }
 
     // Ejecutar el contenedor en el entorno de desarrollo
     bat """
-        echo Ejecutando el contenedor ${containerName} en el puerto ${port}
         docker run -d -p ${port}:5000 --name ${containerName} hands-on-jenkins/myapp:${BUILD_NUMBER}
     """
 }
