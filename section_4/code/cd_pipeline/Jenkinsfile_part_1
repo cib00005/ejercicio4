@@ -1,32 +1,3 @@
-#!/usr/bin/groovy
-
-pipeline {
-    agent any
-
-    options {
-        disableConcurrentBuilds()
-    }
-
-    stages {
-
-        stage("Build") {
-            steps { buildApp() }
-        }
-
-        stage("Deploy - Dev") {
-            steps { deploy('dev') }
-        }
-
-    }
-}
-
-// steps
-def buildApp() {
-    dir ('section_4/code/cd_pipeline') {
-        def appImage = docker.build("hands-on-jenkins/myapp:${BUILD_NUMBER}")
-    }
-}
-
 def deploy(environment) {
 
     def containerName = ''
@@ -49,14 +20,20 @@ def deploy(environment) {
         // Detener los contenedores si están corriendo
         bat """
             for /f "tokens=*" %%i in ('docker ps -f "name=${containerName}" -q') do (
-                if %%i NEQ "" docker stop %%i
+                if %%i NEQ "" (
+                    echo Deteniendo contenedor %%i
+                    docker stop %%i
+                )
             )
         """
-        
+
         // Eliminar contenedores detenidos
         bat """
             for /f "tokens=*" %%i in ('docker ps -a -f "name=${containerName}" -q') do (
-                if %%i NEQ "" docker rm %%i
+                if %%i NEQ "" (
+                    echo Eliminando contenedor %%i
+                    docker rm %%i
+                )
             )
         """
     } else {
@@ -68,3 +45,4 @@ def deploy(environment) {
         docker run -d -p ${port}:5000 --name ${containerName} hands-on-jenkins/myapp:${BUILD_NUMBER}
     """
 }
+
